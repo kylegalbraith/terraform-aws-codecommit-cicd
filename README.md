@@ -8,7 +8,7 @@ Terraform module that stands up a new AWS CodeCommit repository integrated with 
 ## Usage
 ```hcl
 module "codecommit-cicd" {
-    source                 = "git::https://github.com/slalompdx/terraform-aws-codecommit-cicd.git?ref=master"
+    source                 = "git::https://github.com/kylegalbraith/terraform-aws-codecommit-cicd?ref=master"
     repo_name                 = "new-test-repo"              # Required
     organization_name         = "slalom"                     # Required
     repo_default_branch       = "master"                     # Default value
@@ -22,6 +22,7 @@ module "codecommit-cicd" {
     test_buildspec            = "buildspec_test.yml"         # Default value
     package_buildspec         = "buildspec.yml"              # Default value
     force_artifact_destroy    = "false"                      # Default value
+    build_artifact_kms_key    = ""                           # Default value
 }
 ```
 
@@ -31,10 +32,10 @@ New repositories are **not** created with their default branch. Therefore, once 
 Your command line execution might look something like this:
 
 ```bash
-$>terraform apply
-$>git clone https://git-codecommit.us-west-2.amazonaws.com/v1/repos/slalom-devops
-$>cd slalom-devops
-$>echo 'hello world' > touch.txt
-$>git commit -a -m 'init master'
-$>git push -u origin master
+$ terraform apply
+$ git clone https://git-codecommit.us-west-2.amazonaws.com/v1/repos/slalom-devops
+$ cd slalom-devops
+$ echo 'hello world' > touch.txt
+$ git commit -a -m 'init master'
+$ git push -u origin master
 ```

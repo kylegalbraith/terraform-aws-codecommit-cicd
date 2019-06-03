@@ -39,6 +39,11 @@ variable "force_artifact_destroy" {
   default     = "false"
 }
 
+variable "build_artifact_kms_key" {
+  description = "The KMS encryption key ARN used to encrypt artifacts (default: new one will be created)."
+  default     = ""
+}
+
 variable "environment" {
   description = "The environment being deployed (default: dev)"
   default     = "dev"
