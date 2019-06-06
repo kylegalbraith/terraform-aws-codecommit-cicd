@@ -249,7 +249,7 @@ resource "aws_iam_role_policy" "codebuild_policy" {
         "kms:ReEncrypt*",
         "kms:Decrypt"
       ],
-      "Resource": "${var.build_artifact_kms_key},
+      "Resource": "${var.build_artifact_kms_key}",
       "Effect": "Allow"
     }
   ]
