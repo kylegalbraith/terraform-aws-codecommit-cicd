@@ -40,7 +40,7 @@ variable "force_artifact_destroy" {
 }
 
 variable "build_artifact_kms_key" {
-  description = "The KMS encryption key ARN used to encrypt artifacts (default: new one will be created)."
+  description = "The KMS encryption key ARN used to encrypt artifacts (required)."
   default     = ""
 }
 
