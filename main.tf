@@ -6,32 +6,32 @@
 # ---------------------------------------------------------------------------------------------------------------------
 
 provider "aws" {
-  region = "${var.aws_region}"
+  region = var.aws_region
 }
 
 # Generate a unique label for naming resources
 module "unique_label" {
   source     = "git::https://github.com/cloudposse/terraform-null-label.git?ref=tags/0.3.1"
-  namespace  = "${var.organization_name}"
-  name       = "${var.repo_name}"
-  stage      = "${var.environment}"
-  delimiter  = "${var.char_delimiter}"
+  namespace  = var.organization_name
+  name       = var.repo_name
+  stage      = var.environment
+  delimiter  = var.char_delimiter
   attributes = []
-  tags       = "${map()}"
+  tags       = {}
 }
 
 # CodeCommit resources
 resource "aws_codecommit_repository" "repo" {
-  repository_name = "${var.repo_name}"
+  repository_name = var.repo_name
   description     = "${var.repo_name} repository."
-  default_branch  = "${var.repo_default_branch}"
+  default_branch  = var.repo_default_branch
 }
 
 # CodePipeline resources
 resource "aws_s3_bucket" "build_artifact_bucket" {
-  bucket        = "${module.unique_label.id}"
+  bucket        = module.unique_label.id
   acl           = "private"
-  force_destroy = "${var.force_artifact_destroy}"
+  force_destroy = var.force_artifact_destroy
 }
 
 data "aws_iam_policy_document" "codepipeline_assume_policy" {
@@ -48,13 +48,13 @@ data "aws_iam_policy_document" "codepipeline_assume_policy" {
 
 resource "aws_iam_role" "codepipeline_role" {
   name               = "${module.unique_label.name}-codepipeline-role"
-  assume_role_policy = "${data.aws_iam_policy_document.codepipeline_assume_policy.json}"
+  assume_role_policy = data.aws_iam_policy_document.codepipeline_assume_policy.json
 }
 
 # CodePipeline policy needed to use CodeCommit and CodeBuild
 resource "aws_iam_role_policy" "attach_codepipeline_policy" {
   name = "${module.unique_label.name}-codepipeline-policy"
-  role = "${aws_iam_role.codepipeline_role.id}"
+  role = aws_iam_role.codepipeline_role.id
 
   policy = <<EOF
 {
@@ -180,6 +180,7 @@ resource "aws_iam_role_policy" "attach_codepipeline_policy" {
     "Version": "2012-10-17"
 }
 EOF
+
 }
 
 # CodeBuild IAM Permissions
@@ -200,11 +201,12 @@ resource "aws_iam_role" "codebuild_assume_role" {
   ]
 }
 EOF
+
 }
 
 resource "aws_iam_role_policy" "codebuild_policy" {
   name = "${module.unique_label.name}-codebuild-policy"
-  role = "${aws_iam_role.codebuild_assume_role.id}"
+  role = aws_iam_role.codebuild_assume_role.id
 
   policy = <<POLICY
 {
@@ -255,30 +257,31 @@ resource "aws_iam_role_policy" "codebuild_policy" {
   ]
 }
 POLICY
+
 }
 
 # CodeBuild Section for the Package stage
 resource "aws_codebuild_project" "build_project" {
   name           = "${var.repo_name}-package"
   description    = "The CodeBuild project for ${var.repo_name}"
-  service_role   = "${aws_iam_role.codebuild_assume_role.arn}"
-  build_timeout  = "${var.build_timeout}"
-  encryption_key = "${var.build_artifact_kms_key}"
+  service_role   = aws_iam_role.codebuild_assume_role.arn
+  build_timeout  = var.build_timeout
+  encryption_key = var.build_artifact_kms_key
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-    compute_type    = "${var.build_compute_type}"
-    image           = "${var.build_image}"
+    compute_type    = var.build_compute_type
+    image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = "${var.build_privileged_override}"
+    privileged_mode = var.build_privileged_override
   }
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "${var.package_buildspec}"
+    buildspec = var.package_buildspec
   }
 }
 
@@ -286,38 +289,38 @@ resource "aws_codebuild_project" "build_project" {
 resource "aws_codebuild_project" "test_project" {
   name           = "${var.repo_name}-test"
   description    = "The CodeBuild project for ${var.repo_name}"
-  service_role   = "${aws_iam_role.codebuild_assume_role.arn}"
-  build_timeout  = "${var.build_timeout}"
-  encryption_key = "${var.build_artifact_kms_key}"
+  service_role   = aws_iam_role.codebuild_assume_role.arn
+  build_timeout  = var.build_timeout
+  encryption_key = var.build_artifact_kms_key
 
   artifacts {
     type = "CODEPIPELINE"
   }
 
   environment {
-    compute_type    = "${var.build_compute_type}"
-    image           = "${var.build_image}"
+    compute_type    = var.build_compute_type
+    image           = var.build_image
     type            = "LINUX_CONTAINER"
-    privileged_mode = "${var.build_privileged_override}"
+    privileged_mode = var.build_privileged_override
   }
 
   source {
     type      = "CODEPIPELINE"
-    buildspec = "${var.test_buildspec}"
+    buildspec = var.test_buildspec
   }
 }
 
 # Full CodePipeline
 resource "aws_codepipeline" "codepipeline" {
-  name     = "${var.repo_name}"
-  role_arn = "${aws_iam_role.codepipeline_role.arn}"
+  name     = var.repo_name
+  role_arn = aws_iam_role.codepipeline_role.arn
 
-  artifact_store = {
-    location = "${aws_s3_bucket.build_artifact_bucket.bucket}"
+  artifact_store {
+    location = aws_s3_bucket.build_artifact_bucket.bucket
     type     = "S3"
 
-    encryption_key = {
-      id   = "${var.build_artifact_kms_key}"
+    encryption_key {
+      id   = var.build_artifact_kms_key
       type = "KMS"
     }
   }
@@ -333,9 +336,9 @@ resource "aws_codepipeline" "codepipeline" {
       version          = "1"
       output_artifacts = ["source"]
 
-      configuration {
-        RepositoryName = "${var.repo_name}"
-        BranchName     = "${var.repo_default_branch}"
+      configuration = {
+        RepositoryName = var.repo_name
+        BranchName     = var.repo_default_branch
       }
     }
   }
@@ -352,8 +355,8 @@ resource "aws_codepipeline" "codepipeline" {
       output_artifacts = ["tested"]
       version          = "1"
 
-      configuration {
-        ProjectName = "${aws_codebuild_project.test_project.name}"
+      configuration = {
+        ProjectName = aws_codebuild_project.test_project.name
       }
     }
   }
@@ -370,9 +373,10 @@ resource "aws_codepipeline" "codepipeline" {
       output_artifacts = ["packaged"]
       version          = "1"
 
-      configuration {
-        ProjectName = "${aws_codebuild_project.build_project.name}"
+      configuration = {
+        ProjectName = aws_codebuild_project.build_project.name
       }
     }
   }
 }
+
